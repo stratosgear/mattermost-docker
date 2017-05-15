@@ -1,0 +1,54 @@
+version: "2"
+
+services:
+
+  matterm-db:
+    build: db
+    container_name: matterm-db
+    restart: unless-stopped
+    volumes:
+      - /data/mattermost/postgresql/data:/var/lib/postgresql/data
+      - /etc/localtime:/etc/localtime:ro
+    env_file: postgres.env
+    networks:
+      - matterm-network
+
+    # uncomment the following to enable backup
+    #  - AWS_ACCESS_KEY_ID=XXXX
+    #  - AWS_SECRET_ACCESS_KEY=XXXX
+    #  - WALE_S3_PREFIX=s3://BUCKET_NAME/PATH
+    #  - AWS_REGION=us-east-1
+    #  in case your config is not in default location
+    #  - MM_CONFIG=/mattermost/config/config.jso
+
+  matterm-app:
+    build:
+      context: app
+      # comment out for team edition
+      #dockerfile: Dockerfile-enterprise
+    container_name: matterm-app
+    restart: unless-stopped
+    volumes:
+      - /data/mattermost/app/config:/mattermost/config:rw
+      - /data/mattermost/app/data:/mattermost/data:rw
+      - /data/mattermost/app/logs:/mattermost/logs:rw
+      - /etc/localtime:/etc/localtime:ro
+    env_file: mattermost.env
+    environment:
+      - "VIRTUAL_HOST=chat.hypervasis.com"
+      - "LETSENCRYPT_HOST=chat.hypervasis.com"
+      - "LETSENCRYPT_EMAIL=stratosgear@gmail.com"      
+    links:
+      - matterm-db
+    networks:
+      - matterm-network
+      - nginxproxy-network
+
+networks:
+    matterm-network:
+        external:
+            name: matterm-network
+    nginxproxy-network:
+         external:
+             name: nginxproxy-network
+
